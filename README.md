@@ -1,6 +1,6 @@
 # listen
 
-listen to a port and logging requests
+listen to a port and log requests
 
 ## install
 
