@@ -2,33 +2,68 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
-	"io/ioutil"
 	"os"
+	"strconv"
+
+	"github.com/urfave/cli/v2"
 )
 
 func main() {
-	logPath := "development.log"
-	httpPort := 4000
+
+	app := &cli.App{
+		Name:  "listen",
+		Usage: "listen to a port and log requests",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:  "port",
+				Value: "4000",
+				Usage: "port ",
+			},
+			&cli.StringFlag{
+				Name:  "logPath",
+				Value: "",
+				Usage: "path to log file",
+			},
+		},
+		Action: func(c *cli.Context) error {
+			port := 4000
+			if c.NArg() > 0 {
+				if p, err := strconv.Atoi(c.Args().Get(0)); err == nil {
+					port = p
+				}
+			}
+			start(port, c.String("logPath"))
+			return nil
+		},
+	}
+
+	err := app.Run(os.Args)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func start(port int, logPath string) {
 
 	openLogFile(logPath)
-
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 
 	http.HandleFunc("/", rootHandler)
 
-	fmt.Printf("listening on %v\n", httpPort)
-	fmt.Printf("Logging to %v\n", logPath)
+	fmt.Printf("listening on %v\n", port)
 
-	err := http.ListenAndServe(fmt.Sprintf(":%d", httpPort), logRequest(http.DefaultServeMux))
+	err := http.ListenAndServe(fmt.Sprintf(":%d", port), logRequest(http.DefaultServeMux))
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "<h1>Hello World</h1><div>Welcome to whereever you are</div>")
+	fmt.Fprintf(w, "")
 }
 
 func logRequest(handler http.Handler) http.Handler {
@@ -38,20 +73,20 @@ func logRequest(handler http.Handler) http.Handler {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("%s %s %s %s\n", r.RemoteAddr, r.Method, r.URL, b)
-		log.Printf("%s %s %s %s\n", r.RemoteAddr, r.Method, r.URL, b)
+		line := fmt.Sprintf("%s %s %s %s\n", r.RemoteAddr, r.Method, r.URL, b)
+		fmt.Printf(line)
+		log.Printf(line)
 		handler.ServeHTTP(w, r)
 	})
 }
 
 func openLogFile(logfile string) {
 	if logfile != "" {
+		fmt.Printf("Logging to %v\n", logfile)
 		lf, err := os.OpenFile(logfile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0640)
-
 		if err != nil {
-			log.Fatal("OpenLogfile: os.OpenFile:", err)
+			log.Fatal("OpenLogfile", err)
 		}
-
 		log.SetOutput(lf)
 	}
 }
