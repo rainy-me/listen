@@ -5,7 +5,7 @@ listen to a port and logging requests
 ## install
 
 ```sh
-go get github.com/rainy-me/listen
+go get github.com/rainy-me/listen/v2
 ```
 
 ## usage
